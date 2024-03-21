@@ -28,6 +28,8 @@ string index_folder;
 string index_marker_length;
 // string folderPath;
 
+string python_command;
+string python_script_path;
 string dbhost;
 string dbport;
 string dbname;
@@ -126,6 +128,9 @@ void init(const char* configPath) {
     gene_marker_path = ini.GetValue("filepath", "marker_gene_path", "");
     index_folder = ini.GetValue("filepath", "index_folder", "");
     index_marker_length = ini.GetValue("filepath", "index_marker_length", "0");
+
+    python_command = ini.GetValue("pythonscript", "command", "");
+    python_script_path = ini.GetValue("pythonscript", "script_path", "");
 
     dbHelper.setHost(dbhost);
     dbHelper.setPort(dbport);
@@ -678,13 +683,11 @@ extern "C" {
         }
 
         for (const string& csvFile : csvFiles) {
-
-            std::string command = "python3 /mnt/c/Users/research/Downloads/sc_search/update_index.py";
             std::string arg1 = gene_marker_path;
             std::string arg2 = csvFile;
             // std::string arg3 = std::to_string(8);
             std::string arg3 = index_marker_length;
-            std::string fullCommand = command + " -i " + arg1 + " -d " + arg2 + " -n " + arg3;
+            std::string fullCommand = python_command + " " + python_script_path + " -i " + arg1 + " -d " + arg2 + " -n " + arg3;
             int result = std::system(fullCommand.c_str());
             if (result == 0) {
                 std::cout << "Update index executed successfully." << std::endl;
