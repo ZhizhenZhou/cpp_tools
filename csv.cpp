@@ -403,24 +403,35 @@ void processCell(const std::string& line, const std::map<std::string, std::vecto
             if (!indexGeneLocate.empty()) {
                 // 创建索引字符串
                 std::stringstream indexstream;
+                int unexpressedGeneNum = 0;
                 for (const auto& i : indexGeneLocate) {
                     int x;
                     if (i != -1) {
-                        x = (row[i] > 0) ? 1 : 0;
+                        if (row[i] > 0) {
+                            x = 1;
+                        } else {
+                            x = 0;
+                            unexpressedGeneNum++;
+                        }
+                        // x = (row[i] > 0) ? 1 : 0;
                     } else {
                         x = 0;
+                        unexpressedGeneNum++;
                     }
                     indexstream << x;
                 }
-                std::string index = indexstream.str();
+                
+                if (unexpressedGeneNum != std::stoi(index_marker_length)) {
+                    std::string index = indexstream.str();
 
-                // 创建 Model 对象
-                Model data;
-                data.setIndex(index);
+                    // 创建 Model 对象
+                    Model data;
+                    data.setIndex(index);
 
-                // 添加到 ModelDict 中
-                std::lock_guard<std::mutex> lock(mtx);  // 加锁以防止多个线程同时写入 ModelDict
-                ModelDict[indexName].push_back(std::make_pair(cellName, data));
+                    // 添加到 ModelDict 中
+                    std::lock_guard<std::mutex> lock(mtx);  // 加锁以防止多个线程同时写入 ModelDict
+                    ModelDict[indexName].push_back(std::make_pair(cellName, data));
+                }
             }
         }
     // cout << "结束处理" << cellName << endl;
@@ -525,7 +536,7 @@ string search_address_with_index(const string &index, const string &table_name) 
 string sc_index_encode(const rapidcsv::Document& query_csv, const rapidcsv::Document& gene_marker_csv, const string& cellName, const string& indexName) {
     vector<string> gene_marker = gene_marker_csv.GetColumn<string>(indexName);
     stringstream indexstream;
-    int nonExistentIndexNum = 0; 
+    int unexpressedGeneNum = 0; 
     for (int i = 0; i < std::stoi(index_marker_length); i++) {
         try {
             std::string geneName = gene_marker[i];
@@ -534,16 +545,16 @@ string sc_index_encode(const rapidcsv::Document& query_csv, const rapidcsv::Docu
             if (cell > 0) {
                 j = 1;
             } else {
-                nonExistentIndexNum++;
+                unexpressedGeneNum++;
             }
             // int j = (cell > 0) ? 1 : 0;
             indexstream << j;
         } catch (const exception &e) {
             indexstream << 0;
-            nonExistentIndexNum++;
+            unexpressedGeneNum++;
         }
     }
-    if (nonExistentIndexNum == std::stoi(index_marker_length)) {
+    if (unexpressedGeneNum == std::stoi(index_marker_length)) {
         throw std::logic_error("");
         // throw std::logic_error("All marker gene in this index " + indexName + " not exist.");
         // return;
