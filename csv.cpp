@@ -555,7 +555,8 @@ string sc_index_encode(const rapidcsv::Document& query_csv, const rapidcsv::Docu
         }
     }
     if (unexpressedGeneNum == std::stoi(index_marker_length)) {
-        throw std::logic_error("");
+        throw;
+        // throw std::logic_error("");
         // throw std::logic_error("All marker gene in this index " + indexName + " not exist.");
         // return;
     }
