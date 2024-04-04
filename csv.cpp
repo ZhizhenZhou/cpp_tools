@@ -534,9 +534,10 @@ string search_address_with_index(const string &index, const string &table_name) 
 }
 
 string sc_index_encode(const rapidcsv::Document& query_csv, const rapidcsv::Document& gene_marker_csv, const string& cellName, const string& indexName) {
-    vector<string> gene_marker = gene_marker_csv.GetColumn<string>(indexName);
-    stringstream indexstream;
-    int unexpressedGeneNum = 0; 
+    std::vector<string> gene_marker = gene_marker_csv.GetColumn<string>(indexName);
+    std::stringstream indexstream;
+    int unexpressedGeneNum = 0;
+    int nonExistentGeneNum = 0;
     for (int i = 0; i < std::stoi(index_marker_length); i++) {
         try {
             std::string geneName = gene_marker[i];
@@ -552,12 +553,19 @@ string sc_index_encode(const rapidcsv::Document& query_csv, const rapidcsv::Docu
         } catch (const exception &e) {
             indexstream << 0;
             unexpressedGeneNum++;
+            nonExistentGeneNum++;
         }
     }
-    if (unexpressedGeneNum == std::stoi(index_marker_length)) {
-        throw std::logic_error("");
+    if (nonExistentGeneNum == std::stoi(index_marker_length)) {
+        return "invalid index";
+    } else if (unexpressedGeneNum == std::stoi(index_marker_length)) {
+        return "all zero";
+        // throw std::logic_error("");
         // throw std::logic_error("All marker gene in this index " + indexName + " not exist.");
         // return;
+    } else {
+        string index = indexstream.str();
+        return index;
     }
     // for (const string &geneName : gene_marker) {
     //     try {
@@ -570,8 +578,6 @@ string sc_index_encode(const rapidcsv::Document& query_csv, const rapidcsv::Docu
     //         throw std::out_of_range("row not found: " + geneName);
     //     }
     // }
-    string index = indexstream.str();
-    return index;
 }
 
 string find_index_path(const string& indexName, const string& index) {
@@ -583,11 +589,17 @@ void search_linecount_for_a_cell_thread(const rapidcsv::Document& query_csv, con
 //    auto start_time = std::chrono::steady_clock::now();
     try {
         string index = sc_index_encode(query_csv, gene_marker_csv, cellName, indexName);
-        string index_file_path = find_index_path(indexName, index);
-        if (std::filesystem::exists(index_file_path)) {
-//            std::lock_guard<std::mutex> lock(mtx); // 上锁，以确保unordered_map的线程安全性
-            lineCount(index_file_path, linecount);
-            indexNum++;
+        if (index == "invalid index") {
+            // 所有index无效，放弃
+        } else if (index == "all zero") {
+            // 这里单独处理全0的情况
+        } else {
+            string index_file_path = find_index_path(indexName, index);
+            if (std::filesystem::exists(index_file_path)) {
+    //            std::lock_guard<std::mutex> lock(mtx); // 上锁，以确保unordered_map的线程安全性
+                lineCount(index_file_path, linecount);
+                indexNum++;
+            }
         }
     } catch (const std::out_of_range &e) {
         return;
