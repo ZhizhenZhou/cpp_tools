@@ -13,6 +13,7 @@
 #include <queue>
 #include <functional>
 #include <condition_variable>
+#include <tuple>
 #include "json.hpp"
 #include "rapidcsv.h"
 #include "dbHelper.hpp"
@@ -175,9 +176,6 @@ void lineCount(const string& filepath, unordered_map<string, int>& linecount) {
         while (getline(file, line)) {
             // 统计每一行的出现次数
             linecount[line]++;
-            if (line.find("PT2_CD19pos@TCTATTGTCCTCAACC-1") != std::string::npos) {
-                cout << linecount[line] << ": " << filepath << endl;
-            }
         }
 
         file.close();
@@ -199,38 +197,98 @@ void cutoff_map(float cutoff, unordered_map<string, int>& linecount) {
     
 }
 
-vector<string> find_k_MAX(int k, const unordered_map<string, int>& linecount, int indexCount) {
-    vector<string> results;
-    vector<pair<string, int> > countVector(linecount.begin(), linecount.end());
+// vector<string> find_k_MAX(int k, const unordered_map<string, int>& linecount, int indexCount) {
+//     vector<string> results;
+//     vector<pair<string, int> > countVector(linecount.begin(), linecount.end());
 
-    sort(countVector.begin(), countVector.end(),
-        [](const pair<string, int>& a, const pair<string, int>& b) {
-            return a.second > b.second;
-        });
+//     sort(countVector.begin(), countVector.end(),
+//         [](const pair<string, int>& a, const pair<string, int>& b) {
+//             return a.second > b.second;
+//         });
 
-    if (k <= 0) {
-        for (int i = 0; i < countVector.size(); i++) {
-            stringstream result;
-            result << countVector[i].first << "," << countVector[i].second << "/" << indexCount;
-            results.push_back(result.str());
-        }
-    } else {
-        for (int i = 0; i < k && i < countVector.size(); i++) {
-            stringstream result;
-            result << countVector[i].first << "," << countVector[i].second << "/" << indexCount;
-            results.push_back(result.str());
-        }
+//     if (k <= 0) {
+//         for (int i = 0; i < countVector.size(); i++) {
+//             stringstream result;
+//             result << countVector[i].first << "," << countVector[i].second << "/" << indexCount;
+//             results.push_back(result.str());
+//         }
+//     } else {
+//         for (int i = 0; i < k && i < countVector.size(); i++) {
+//             stringstream result;
+//             result << countVector[i].first << "," << countVector[i].second << "/" << indexCount;
+//             results.push_back(result.str());
+//         }
+//     }
+
+//     return results;
+
+//     // for (json::iterator it = j.begin(); it != j.end(); ++it) {
+//     //     vector<string> value = it.value();
+//     //     if (value.size() > k) {
+//     //         value.resize(k);
+//     //         j[it.key()] = value;
+//     //     }
+//     // }
+// }
+
+vector<string> find_k_MAX(int k, const unordered_map<string, int>& expressedLinecount, int expressedIndexCount, const unordered_map<string, int>& unexpressedLinecount, int unexpressedIndexCount, const float alpha) {
+    // double alpha = 0.1;
+    json jsonMatches;
+
+    for (const auto& entry : expressedLinecount) {
+        const string& str = entry.first;
+        int expressedCount = entry.second;
+        int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
+        std::stringstream match_degree_expressed;
+        match_degree_expressed << expressedCount << "/" << expressedIndexCount;
+        std::stringstream match_degree_unexpressed;
+        match_degree_unexpressed << unexpressedCount << "/" << unexpressedIndexCount;
+
+        double match_expressed = static_cast<double>(expressedCount) / expressedIndexCount;
+        double match_unexpressed = static_cast<double>(unexpressedCount) / unexpressedIndexCount;
+        double match = match_expressed * alpha + match_unexpressed * (1 - alpha);
+
+        jsonMatches[str] = {
+            {"match_degree_expressed", match_degree_expressed.str()},
+            {"match_degree_unexpressed", match_degree_unexpressed.str()},
+            {"match_degree", match}
+        };
     }
 
-    return results;
+    // 创建一个存储字符串和匹配值的向量，并根据匹配值进行排序
+    vector<pair<string, double>> sortedPairs;
+    for (const auto& entry : jsonMatches.items()) {
+        sortedPairs.push_back(make_pair(entry.key(), entry.value()["match_degree"].get<double>()));
+    }
+    sort(sortedPairs.begin(), sortedPairs.end(), [](const pair<string, double>& a, const pair<string, double>& b) {
+        return a.second > b.second; // 降序排序
+    });
 
-    // for (json::iterator it = j.begin(); it != j.end(); ++it) {
-    //     vector<string> value = it.value();
-    //     if (value.size() > k) {
-    //         value.resize(k);
-    //         j[it.key()] = value;
-    //     }
-    // }
+    // 判断k的值，如果小于等于0，则返回所有结果
+    if (k <= 0) {
+        vector<string> allResults;
+        for (const auto& pair : sortedPairs) {
+            const string& str = pair.first;
+            const json& matchInfo = jsonMatches[str];
+            string result = str + ", match_degree_expressed: " + matchInfo["match_degree_expressed"].get<string>() +
+                            ", match_degree_unexpressed: " + matchInfo["match_degree_unexpressed"].get<string>() +
+                            ", match: " + to_string(matchInfo["match_degree"].get<double>());
+            allResults.push_back(result);
+        }
+        return allResults;
+    } else {
+        // 取出前 k 个字符串，并将字符串和匹配值连接起来
+        vector<string> topK;
+        for (int i = 0; i < k && i < sortedPairs.size(); ++i) {
+            const string& str = sortedPairs[i].first;
+            const json& matchInfo = jsonMatches[str];
+            string result = str + ", match_degree_expressed: " + matchInfo["match_degree_expressed"].get<string>() +
+                            ", match_degree_unexpressed: " + matchInfo["match_degree_unexpressed"].get<string>() +
+                            ", match: " + to_string(matchInfo["match_degree"].get<double>());
+            topK.push_back(result);
+        }
+        return topK;
+    }
 }
 
 vector<string> extract_all_string(const unordered_map<string, int>& linecount) {
@@ -421,17 +479,17 @@ void processCell(const std::string& line, const std::map<std::string, std::vecto
                     indexstream << x;
                 }
                 
-                if (unexpressedGeneNum != std::stoi(index_marker_length)) {
-                    std::string index = indexstream.str();
+                // if (unexpressedGeneNum != std::stoi(index_marker_length)) {
+                std::string index = indexstream.str();
 
-                    // 创建 Model 对象
-                    Model data;
-                    data.setIndex(index);
+                // 创建 Model 对象
+                Model data;
+                data.setIndex(index);
 
-                    // 添加到 ModelDict 中
-                    std::lock_guard<std::mutex> lock(mtx);  // 加锁以防止多个线程同时写入 ModelDict
-                    ModelDict[indexName].push_back(std::make_pair(cellName, data));
-                }
+                // 添加到 ModelDict 中
+                std::lock_guard<std::mutex> lock(mtx);  // 加锁以防止多个线程同时写入 ModelDict
+                ModelDict[indexName].push_back(std::make_pair(cellName, data));
+                // }
             }
         }
     // cout << "结束处理" << cellName << endl;
@@ -581,24 +639,36 @@ string sc_index_encode(const rapidcsv::Document& query_csv, const rapidcsv::Docu
 }
 
 string find_index_path(const string& indexName, const string& index) {
-    string result_path = index_folder + indexName + "/" + index + ".txt";
+    std::string result_path;
+    if (index == "all zero") {
+        std::string all_zero;
+        all_zero.resize(std::stoi(index_marker_length), '0');
+        result_path = index_folder + indexName + "/" + all_zero + ".txt";
+    } else {
+        result_path = index_folder + indexName + "/" + index + ".txt";
+    }
     return result_path;
 }
 
-void search_linecount_for_a_cell_thread(const rapidcsv::Document& query_csv, const rapidcsv::Document& gene_marker_csv, unordered_map<string, int>& linecount, const string& cellName, int& indexNum, const std::string& indexName) {
+void search_linecount_for_a_cell_thread(const rapidcsv::Document& query_csv, const rapidcsv::Document& gene_marker_csv, unordered_map<string, int>& expressedLinecount, unordered_map<string, int>& unexpressedLinecount, const string& cellName, int& expressedIndexNum, int& unexpressedIndexNum, const std::string& indexName) {
 //    auto start_time = std::chrono::steady_clock::now();
     try {
-        string index = sc_index_encode(query_csv, gene_marker_csv, cellName, indexName);
+        std::string index = sc_index_encode(query_csv, gene_marker_csv, cellName, indexName);
         if (index == "invalid index") {
             // 所有index无效，放弃
         } else if (index == "all zero") {
             // 这里单独处理全0的情况
+            std::string index_file_path = find_index_path(indexName, index);
+            if (std::filesystem::exists(index_file_path)) {
+                lineCount(index_file_path, unexpressedLinecount);
+                unexpressedIndexNum++;
+            }
         } else {
             string index_file_path = find_index_path(indexName, index);
             if (std::filesystem::exists(index_file_path)) {
     //            std::lock_guard<std::mutex> lock(mtx); // 上锁，以确保unordered_map的线程安全性
-                lineCount(index_file_path, linecount);
-                indexNum++;
+                lineCount(index_file_path, expressedLinecount);
+                expressedIndexNum++;
             }
         }
     } catch (const std::out_of_range &e) {
@@ -613,17 +683,18 @@ void search_linecount_for_a_cell_thread(const rapidcsv::Document& query_csv, con
 //    std::cout << cellName << " " << indexName << "搜索用时" << duration.count() / 1000.0 << "秒" << std::endl;
 }
 
-int search_linecount_for_a_cell(const rapidcsv::Document& query_csv, const rapidcsv::Document& gene_marker_csv, unordered_map<string, int>& linecount, const string& cellName) {
+std::pair<int, int> search_linecount_for_a_cell(const rapidcsv::Document& query_csv, const rapidcsv::Document& gene_marker_csv, unordered_map<string, int>& expressedLinecount, unordered_map<string, int>& unexpressedLinecount, const string& cellName) {
     try {
         // 这里indexNum是有用的index数量，也就是用于查询的cell，有多少个能够正确编码的index
-        int indexNum = 0;
+        int expressedIndexNum = 0;
+        int unexpressedIndexNum = 0;
 //        std::vector<std::thread> threads;
 //        ThreadPool pool(615);
 
 //        cout << "开始搜索细胞" << cellName << getCurrentTime() << endl;
         for (const auto &indexName : gene_marker_csv.GetColumnNames()) {
 //            threads.emplace_back(search_linecount_for_a_cell_thread, std::ref(query_csv), std::ref(gene_marker_csv), std::ref(linecount), std::cref(cellName), std::ref(indexNum), std::cref(indexName));
-            search_linecount_for_a_cell_thread(query_csv, gene_marker_csv, linecount, cellName, indexNum, indexName);
+            search_linecount_for_a_cell_thread(query_csv, gene_marker_csv, expressedLinecount, unexpressedLinecount, cellName, expressedIndexNum, unexpressedIndexNum, indexName);
 //            pool.enqueue(search_linecount_for_a_cell_thread, std::ref(query_csv), std::ref(gene_marker_csv), std::ref(linecount), std::cref(cellName), std::ref(indexNum), std::cref(indexName));
         }
 
@@ -635,34 +706,36 @@ int search_linecount_for_a_cell(const rapidcsv::Document& query_csv, const rapid
 //        }
 
 //        cout << "结束搜索" << cellName << getCurrentTime() << endl;
-        return indexNum;
+        return std::make_pair(expressedIndexNum, unexpressedIndexNum);
     } catch (const std::exception& e) {
         cerr << "Error: " << e.what() << endl;
-        return 0;
+        return std::make_pair(0, 0);
     }
 }
 
-void process_cell(const rapidcsv::Document& query_csv, const rapidcsv::Document& gene_marker_csv, json& j, const string& cellName, int k, float cutoff) {
+void process_cell(const rapidcsv::Document& query_csv, const rapidcsv::Document& gene_marker_csv, json& j, const string& cellName, int k, float cutoff, const float alpha) {
     auto start_time = std::chrono::steady_clock::now();
 
     try {
-        unordered_map<string, int> linecount;
-        int indexCount = 0;
-        indexCount = search_linecount_for_a_cell(query_csv, gene_marker_csv, linecount, cellName);
+        unordered_map<string, int> expressedLinecount;
+        unordered_map<string, int> unexpressedLinecount;
+        int expressedIndexCount = 0;
+        int unexpressedIndexCount = 0;
+        std::tie(expressedIndexCount, unexpressedIndexCount) = search_linecount_for_a_cell(query_csv, gene_marker_csv, expressedLinecount, unexpressedLinecount, cellName);
 
         if (cutoff > 0) {
-            float cutoff_num = indexCount * cutoff;
+            float cutoff_num = expressedIndexCount * cutoff;
             //将linecount中int小于cutoff设定值的项删去
-            cutoff_map(cutoff_num, linecount);
+            cutoff_map(cutoff_num, expressedLinecount);
         }
 
         //取出linecount里前k个出现最多次数的line
-        vector<string> cell_list = find_k_MAX(k, linecount, indexCount);
+        vector<string> cell_list = find_k_MAX(k, expressedLinecount, expressedIndexCount, unexpressedLinecount, unexpressedIndexCount, alpha);
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
 
-        std::cout << cellName << "搜索用时" << duration.count() / 1000.0 << "秒" << std::endl;
+        // std::cout << cellName << "搜索用时" << duration.count() / 1000.0 << "秒" << std::endl;
 
         // 使用互斥锁保护对 JSON 对象的访问
         lock_guard<mutex> lock(jsonMutex);
@@ -734,7 +807,7 @@ extern "C" {
         end();
     }
 
-    void sc_search(const char* query_csv_path, int k, float cutoff, const char* output_result, const char* iniPath) {
+    void sc_search(const char* query_csv_path, int k, float cutoff, const char* output_result, const char* iniPath, const float alpha) {
         string query(query_csv_path);
         string output(output_result);
         init(iniPath);
@@ -753,7 +826,7 @@ extern "C" {
 
         for (const auto &cellName : query_csv.GetRowNames()) {
 //            threads.emplace_back(process_cell, ref(query_csv), ref(gene_marker_csv), ref(j), cellName, k, cutoff);
-            pool.enqueue(process_cell, ref(query_csv), ref(gene_marker_csv), ref(j), cellName, k, cutoff);
+            pool.enqueue(process_cell, ref(query_csv), ref(gene_marker_csv), ref(j), cellName, k, cutoff, alpha);
 //            process_cell(query_csv, gene_marker_csv, j, cellName, k, cutoff);
         }
 
@@ -779,67 +852,67 @@ extern "C" {
         end();
     }
 
-    void sc_st_search(const char* query_csv_path, int k, const char* output_result, const char* iniPath) {
-        string query(query_csv_path);
-        string output(output_result);
-        init(iniPath);
+    // void sc_st_search(const char* query_csv_path, int k, const char* output_result, const char* iniPath) {
+    //     string query(query_csv_path);
+    //     string output(output_result);
+    //     init(iniPath);
 
-        json j;
+    //     json j;
 
-        rapidcsv::Document gene_marker_csv = rapidcsv::Document(gene_marker_path, rapidcsv::LabelParams(0, -1));
-        //用来query的csv，行名是cellname，列名是genename
-        rapidcsv::Document query_csv = rapidcsv::Document(query, rapidcsv::LabelParams(0, 0));
+    //     rapidcsv::Document gene_marker_csv = rapidcsv::Document(gene_marker_path, rapidcsv::LabelParams(0, -1));
+    //     //用来query的csv，行名是cellname，列名是genename
+    //     rapidcsv::Document query_csv = rapidcsv::Document(query, rapidcsv::LabelParams(0, 0));
 
-        int indexNum = gene_marker_csv.GetColumnCount();
+    //     int indexNum = gene_marker_csv.GetColumnCount();
 
-        //TODO 可以多线程(每个cell一个线程)
-        for (const auto &cellName : query_csv.GetRowNames()) {
-            unordered_map<string, int> linecount;
-            int indexCount = 0;
-            indexCount = search_linecount_for_a_cell(query_csv, gene_marker_csv, linecount, cellName);
-            cout << indexCount << endl;
+    //     //TODO 可以多线程(每个cell一个线程)
+    //     for (const auto &cellName : query_csv.GetRowNames()) {
+    //         unordered_map<string, int> linecount;
+    //         int indexCount = 0;
+    //         indexCount = search_linecount_for_a_cell(query_csv, gene_marker_csv, linecount, cellName);
+    //         cout << indexCount << endl;
 
-            //取出每个index都与之匹配的cell list(即出现次数等于index个数的line)
-            vector<string> cell_list = find_k_count_line(indexNum, linecount);
-            j[cellName] = cell_list;
-        }
+    //         //取出每个index都与之匹配的cell list(即出现次数等于index个数的line)
+    //         vector<string> cell_list = find_k_count_line(indexNum, linecount);
+    //         j[cellName] = cell_list;
+    //     }
 
-        ofstream file(output);
-        file << j.dump();
-        file.close();
+    //     ofstream file(output);
+    //     file << j.dump();
+    //     file.close();
 
-        end();
-    }
+    //     end();
+    // }
 
-    void st_search(const char* query_csv_path, const char* output_result, const char* iniPath) {
-        string query(query_csv_path);
-        string output(output_result);
-        init(iniPath);
+    // void st_search(const char* query_csv_path, const char* output_result, const char* iniPath) {
+    //     string query(query_csv_path);
+    //     string output(output_result);
+    //     init(iniPath);
 
-        json j;
+    //     json j;
 
-        rapidcsv::Document gene_marker_csv = rapidcsv::Document(gene_marker_path, rapidcsv::LabelParams(0, -1));
-        //用来query的csv，行名是cellname，列名是genename
-        rapidcsv::Document query_csv = rapidcsv::Document(query, rapidcsv::LabelParams(0, 0));
+    //     rapidcsv::Document gene_marker_csv = rapidcsv::Document(gene_marker_path, rapidcsv::LabelParams(0, -1));
+    //     //用来query的csv，行名是cellname，列名是genename
+    //     rapidcsv::Document query_csv = rapidcsv::Document(query, rapidcsv::LabelParams(0, 0));
 
-        //TODO 可以多线程(每个cell一个线程)
-        for (const auto &cellName : query_csv.GetRowNames()) {
-            unordered_map<string, int> linecount;
-            int indexCount = 0;
-            indexCount = search_linecount_for_a_cell(query_csv, gene_marker_csv, linecount, cellName);
-            cout << indexCount << endl;
+    //     //TODO 可以多线程(每个cell一个线程)
+    //     for (const auto &cellName : query_csv.GetRowNames()) {
+    //         unordered_map<string, int> linecount;
+    //         int indexCount = 0;
+    //         indexCount = search_linecount_for_a_cell(query_csv, gene_marker_csv, linecount, cellName);
+    //         cout << indexCount << endl;
 
-            //取出每个index都与之匹配的cell list(即出现次数等于index个数的line)
-            vector<string> cell_list = extract_all_string(linecount);
-            j[cellName] = cell_list;
-        }
+    //         //取出每个index都与之匹配的cell list(即出现次数等于index个数的line)
+    //         vector<string> cell_list = extract_all_string(linecount);
+    //         j[cellName] = cell_list;
+    //     }
 
-        ofstream file(output);
-        file << j.dump();
-        file.close();
+    //     ofstream file(output);
+    //     file << j.dump();
+    //     file.close();
 
-        end();
-    }
+    //     end();
+    // }
 }
 
 int main() {
