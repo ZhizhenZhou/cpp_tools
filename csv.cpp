@@ -232,63 +232,101 @@ void cutoff_map(float cutoff, unordered_map<string, int>& linecount) {
 // }
 
 vector<string> find_k_MAX(int k, const unordered_map<string, int>& expressedLinecount, int expressedIndexCount, const unordered_map<string, int>& unexpressedLinecount, int unexpressedIndexCount, const float alpha) {
-    // double alpha = 0.1;
-    json jsonMatches;
+    // json jsonMatches;
 
+    // for (const auto& entry : expressedLinecount) {
+    //     const string& str = entry.first;
+    //     int expressedCount = entry.second;
+    //     int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
+    //     std::stringstream match_degree_expressed;
+    //     match_degree_expressed << expressedCount << "/" << expressedIndexCount;
+    //     std::stringstream match_degree_unexpressed;
+    //     match_degree_unexpressed << unexpressedCount << "/" << unexpressedIndexCount;
+
+    //     double match_expressed = static_cast<double>(expressedCount) / expressedIndexCount;
+    //     double match_unexpressed = static_cast<double>(unexpressedCount) / unexpressedIndexCount;
+    //     double match = match_expressed * alpha + match_unexpressed * (1 - alpha);
+
+    //     jsonMatches[str] = {
+    //         {"match_degree_expressed", match_degree_expressed.str()},
+    //         {"match_degree_unexpressed", match_degree_unexpressed.str()},
+    //         {"match_degree", match}
+    //     };
+    // }
+
+    // // 创建一个存储字符串和匹配值的向量，并根据匹配值进行排序
+    // vector<pair<string, double>> sortedPairs;
+    // for (const auto& entry : jsonMatches.items()) {
+    //     sortedPairs.push_back(make_pair(entry.key(), entry.value()["match_degree"].get<double>()));
+    // }
+    // sort(sortedPairs.begin(), sortedPairs.end(), [](const pair<string, double>& a, const pair<string, double>& b) {
+    //     return a.second > b.second; // 降序排序
+    // });
+
+    // // 判断k的值，如果小于等于0，则返回所有结果
+    // if (k <= 0) {
+    //     vector<string> allResults;
+    //     for (const auto& pair : sortedPairs) {
+    //         const string& str = pair.first;
+    //         const json& matchInfo = jsonMatches[str];
+    //         string result = str + ", match_degree_expressed: " + matchInfo["match_degree_expressed"].get<string>() +
+    //                         ", match_degree_unexpressed: " + matchInfo["match_degree_unexpressed"].get<string>() +
+    //                         ", match: " + to_string(matchInfo["match_degree"].get<double>());
+    //         allResults.push_back(result);
+    //     }
+    //     return allResults;
+    // } else {
+    //     // 取出前 k 个字符串，并将字符串和匹配值连接起来
+    //     vector<string> topK;
+    //     for (int i = 0; i < k && i < sortedPairs.size(); ++i) {
+    //         const string& str = sortedPairs[i].first;
+    //         const json& matchInfo = jsonMatches[str];
+    //         string result = str + ", match_degree_expressed: " + matchInfo["match_degree_expressed"].get<string>() +
+    //                         ", match_degree_unexpressed: " + matchInfo["match_degree_unexpressed"].get<string>() +
+    //                         ", match: " + to_string(matchInfo["match_degree"].get<double>());
+    //         topK.push_back(result);
+    //     }
+    //     return topK;
+    // }
+    vector<pair<string, int> > sortedExpressedPairs; 
     for (const auto& entry : expressedLinecount) {
-        const string& str = entry.first;
-        int expressedCount = entry.second;
-        int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
-        std::stringstream match_degree_expressed;
-        match_degree_expressed << expressedCount << "/" << expressedIndexCount;
-        std::stringstream match_degree_unexpressed;
-        match_degree_unexpressed << unexpressedCount << "/" << unexpressedIndexCount;
-
-        double match_expressed = static_cast<double>(expressedCount) / expressedIndexCount;
-        double match_unexpressed = static_cast<double>(unexpressedCount) / unexpressedIndexCount;
-        double match = match_expressed * alpha + match_unexpressed * (1 - alpha);
-
-        jsonMatches[str] = {
-            {"match_degree_expressed", match_degree_expressed.str()},
-            {"match_degree_unexpressed", match_degree_unexpressed.str()},
-            {"match_degree", match}
-        };
+        sortedExpressedPairs.push_back(entry);
     }
 
-    // 创建一个存储字符串和匹配值的向量，并根据匹配值进行排序
-    vector<pair<string, double>> sortedPairs;
-    for (const auto& entry : jsonMatches.items()) {
-        sortedPairs.push_back(make_pair(entry.key(), entry.value()["match_degree"].get<double>()));
-    }
-    sort(sortedPairs.begin(), sortedPairs.end(), [](const pair<string, double>& a, const pair<string, double>& b) {
-        return a.second > b.second; // 降序排序
+    sort(sortedExpressedPairs.begin(), sortedExpressedPairs.end(), [](const pair<string, int>& a, const pair<string, int>& b) {
+        return a.second > b.second;
     });
 
-    // 判断k的值，如果小于等于0，则返回所有结果
-    if (k <= 0) {
-        vector<string> allResults;
-        for (const auto& pair : sortedPairs) {
-            const string& str = pair.first;
-            const json& matchInfo = jsonMatches[str];
-            string result = str + ", match_degree_expressed: " + matchInfo["match_degree_expressed"].get<string>() +
-                            ", match_degree_unexpressed: " + matchInfo["match_degree_unexpressed"].get<string>() +
-                            ", match: " + to_string(matchInfo["match_degree"].get<double>());
-            allResults.push_back(result);
+    int k1 = 0;
+    int topKCount = expressedIndexCount;
+    std::vector<std::string> result;
+    for (int i = 0; i < sortedExpressedPairs.size(); ++i) {
+        const string& str = sortedExpressedPairs[i].first;
+        int expressedCount = sortedExpressedPairs[i].second;
+
+        if (expressedCount < topKCount && k > 0) {
+            topKCount = expressedCount;
+            k1++;
         }
-        return allResults;
-    } else {
-        // 取出前 k 个字符串，并将字符串和匹配值连接起来
-        vector<string> topK;
-        for (int i = 0; i < k && i < sortedPairs.size(); ++i) {
-            const string& str = sortedPairs[i].first;
-            const json& matchInfo = jsonMatches[str];
-            string result = str + ", match_degree_expressed: " + matchInfo["match_degree_expressed"].get<string>() +
-                            ", match_degree_unexpressed: " + matchInfo["match_degree_unexpressed"].get<string>() +
-                            ", match: " + to_string(matchInfo["match_degree"].get<double>());
-            topK.push_back(result);
+
+        if (k1 <= k) {
+            int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
+            double match_unexpressed = static_cast<double>(unexpressedCount) / static_cast<double>(unexpressedIndexCount);
+            if (match_unexpressed > alpha) {
+                std::stringstream match_degree_expressed;
+                match_degree_expressed << expressedCount << "/" << expressedIndexCount;
+                std::stringstream match_degree_unexpressed;
+                match_degree_unexpressed << unexpressedCount << "/" << unexpressedIndexCount;
+
+                string result_str = str + ", match_degree_expressed: " + match_degree_expressed.str() +
+                                ", match_degree_unexpressed: " + match_degree_unexpressed.str();
+                result.push_back(result_str);
+            }
+        } else {
+            break;
         }
-        return topK;
     }
+    return result;
 }
 
 vector<string> extract_all_string(const unordered_map<string, int>& linecount) {
