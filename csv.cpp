@@ -314,7 +314,7 @@ vector<string> find_k_MAX(int k, const unordered_map<string, int>& expressedLine
         if (k1 <= k2) {
             int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
             double match_unexpressed = static_cast<double>(unexpressedCount) / static_cast<double>(unexpressedIndexCount);
-            if (match_unexpressed > alpha) {
+            if (match_unexpressed > alpha2) {
                 std::stringstream match_degree_expressed;
                 match_degree_expressed << expressedCount << "/" << expressedIndexCount;
                 std::stringstream match_degree_unexpressed;
@@ -327,7 +327,7 @@ vector<string> find_k_MAX(int k, const unordered_map<string, int>& expressedLine
         } else if (k1 <= k) {
             int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
             double match_unexpressed = static_cast<double>(unexpressedCount) / static_cast<double>(unexpressedIndexCount);
-            if (match_unexpressed > alpha2) {
+            if (match_unexpressed > alpha) {
                 std::stringstream match_degree_expressed;
                 match_degree_expressed << expressedCount << "/" << expressedIndexCount;
                 std::stringstream match_degree_unexpressed;
