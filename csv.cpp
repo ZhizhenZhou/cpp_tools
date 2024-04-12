@@ -232,6 +232,8 @@ void cutoff_map(float cutoff, unordered_map<string, int>& linecount) {
 // }
 
 vector<string> find_k_MAX(int k, const unordered_map<string, int>& expressedLinecount, int expressedIndexCount, const unordered_map<string, int>& unexpressedLinecount, int unexpressedIndexCount, const float alpha) {
+    int k2 = 2;
+    float alpha2 = 0.8;
     // json jsonMatches;
 
     // for (const auto& entry : expressedLinecount) {
@@ -309,10 +311,23 @@ vector<string> find_k_MAX(int k, const unordered_map<string, int>& expressedLine
             k1++;
         }
 
-        if (k1 <= k) {
+        if (k1 <= k2) {
             int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
             double match_unexpressed = static_cast<double>(unexpressedCount) / static_cast<double>(unexpressedIndexCount);
             if (match_unexpressed > alpha) {
+                std::stringstream match_degree_expressed;
+                match_degree_expressed << expressedCount << "/" << expressedIndexCount;
+                std::stringstream match_degree_unexpressed;
+                match_degree_unexpressed << unexpressedCount << "/" << unexpressedIndexCount;
+
+                string result_str = str + ", match_degree_expressed: " + match_degree_expressed.str() +
+                                ", match_degree_unexpressed: " + match_degree_unexpressed.str();
+                result.push_back(result_str);
+            }
+        } else if (k1 <= k) {
+            int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
+            double match_unexpressed = static_cast<double>(unexpressedCount) / static_cast<double>(unexpressedIndexCount);
+            if (match_unexpressed > alpha2) {
                 std::stringstream match_degree_expressed;
                 match_degree_expressed << expressedCount << "/" << expressedIndexCount;
                 std::stringstream match_degree_unexpressed;
