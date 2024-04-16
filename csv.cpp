@@ -232,7 +232,7 @@ void cutoff_map(float cutoff, unordered_map<string, int>& linecount) {
 // }
 
 vector<string> find_k_MAX(int k, const unordered_map<string, int>& expressedLinecount, int expressedIndexCount, const unordered_map<string, int>& unexpressedLinecount, int unexpressedIndexCount, const float alpha) {
-    int k2 = 2;
+    int k2 = -1;
     float alpha2 = 0.8;
     // json jsonMatches;
 
