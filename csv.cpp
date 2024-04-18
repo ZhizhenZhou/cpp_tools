@@ -333,8 +333,8 @@ vector<string> find_k_MAX(int k, const unordered_map<string, int>& expressedLine
                 std::stringstream match_degree_unexpressed;
                 match_degree_unexpressed << unexpressedCount << "/" << unexpressedIndexCount;
 
-                string result_str = str + ", match_degree_expressed: " + match_degree_expressed.str() +
-                                ", match_degree_unexpressed: " + match_degree_unexpressed.str();
+                string result_str = str + ",match_degree_expressed:" + match_degree_expressed.str() +
+                                ",match_degree_unexpressed:" + match_degree_unexpressed.str();
                 result.push_back(result_str);
             }
         } else {
