@@ -264,6 +264,7 @@ void search_single_cell(const rapidcsv::Document& query_csv, const rapidcsv::Doc
         int unexpressedIndexCount = 0;
         std::tie(expressedIndexCount, unexpressedIndexCount) = search_single_cell_all_index(query_csv, gene_marker_csv, expressedIndexcode, unexpressedIndexcode, cellName);
         // std::cout << expressedIndexCount << ", " << unexpressedIndexCount << std::endl;
+        std::cout << "***************** " << cellName << " *****************" << std::endl;
         std::cout << "expressedIndexcode:" << std::endl;
         for (const auto& entry : expressedIndexcode) {
             const std::string& key = entry.first;
