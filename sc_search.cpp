@@ -264,6 +264,28 @@ void search_single_cell(const rapidcsv::Document& query_csv, const rapidcsv::Doc
         int unexpressedIndexCount = 0;
         std::tie(expressedIndexCount, unexpressedIndexCount) = search_single_cell_all_index(query_csv, gene_marker_csv, expressedIndexcode, unexpressedIndexcode, cellName);
         // std::cout << expressedIndexCount << ", " << unexpressedIndexCount << std::endl;
+        std::cout << "expressedIndexcode:" << std::endl;
+        for (const auto& entry : expressedIndexcode) {
+            const std::string& key = entry.first;
+            const std::vector<std::string>& values = entry.second;
+            std::cout << key << ": ";
+            for (const std::string& value : values) {
+                std::cout << value << ", ";
+            }
+            std::cout << std::endl;
+        }
+
+        // 输出 unexpressedIndexcode 的内容
+        std::cout << "unexpressedIndexcode:" << std::endl;
+        for (const auto& entry : unexpressedIndexcode) {
+            const std::string& key = entry.first;
+            const std::vector<std::string>& values = entry.second;
+            std::cout << key << ": ";
+            for (const std::string& value : values) {
+                std::cout << value << ", ";
+            }
+            std::cout << std::endl;
+        }
 
         dbHelper.query(expressedIndexcode, searchedCellExpressedIndexCount);
         dbHelper.query(unexpressedIndexcode, searchedCellUnexpressedIndexCount);
