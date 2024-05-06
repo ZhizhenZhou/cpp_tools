@@ -113,4 +113,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    print("New strings have been written to the CSV file.")
