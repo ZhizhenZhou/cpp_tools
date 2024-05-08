@@ -282,6 +282,7 @@ void search_single_cell(const rapidcsv::Document& query_csv, const rapidcsv::Doc
     // auto start_time = std::chrono::steady_clock::now();
 
     try {
+        std::cout << "*********************** " << cellName << " start ***********************" << std::endl;
         std::unordered_map<std::string, std::vector<std::string> > expressedIndexcode;
         std::unordered_map<std::string, std::vector<std::string> > unexpressedIndexcode;
         std::unordered_map<std::string, int> searchedCellExpressedIndexCount;
@@ -290,8 +291,56 @@ void search_single_cell(const rapidcsv::Document& query_csv, const rapidcsv::Doc
         int unexpressedIndexCount = 0;
         std::tie(expressedIndexCount, unexpressedIndexCount) = search_single_cell_all_index(query_csv, gene_marker_csv, expressedIndexcode, unexpressedIndexcode, cellName);
 
+        // 输出 expressedIndexcode
+        std::cout << "expressedIndexcode:\n";
+        for (const auto& entry : expressedIndexcode) {
+            const std::string& key = entry.first;
+            const std::vector<std::string>& values = entry.second;
+
+            std::cout << "Key: " << key << "\n";
+            std::cout << "Values: ";
+            for (const std::string& value : values) {
+                std::cout << value << " ";
+            }
+            std::cout << "\n";
+        }
+
+        // 输出 unexpressedIndexcode
+        std::cout << "unexpressedIndexcode:\n";
+        for (const auto& entry : unexpressedIndexcode) {
+            const std::string& key = entry.first;
+            const std::vector<std::string>& values = entry.second;
+
+            std::cout << "Key: " << key << "\n";
+            std::cout << "Values: ";
+            for (const std::string& value : values) {
+                std::cout << value << " ";
+            }
+            std::cout << "\n";
+        }
+
         dbHelper.query(expressedIndexcode, searchedCellExpressedIndexCount);
         dbHelper.query(unexpressedIndexcode, searchedCellUnexpressedIndexCount);
+        
+        // 输出 searchedCellExpressedIndexCount
+        std::cout << "searchedCellExpressedIndexCount:\n";
+        for (const auto& entry : searchedCellExpressedIndexCount) {
+            const std::string& key = entry.first;
+            const int value = entry.second;
+
+            std::cout << "Key: " << key << "\n";
+            std::cout << "Value: " << value << "\n";
+        }
+
+        // 输出 searchedCellUnexpressedIndexCount
+        std::cout << "searchedCellUnexpressedIndexCount:\n";
+        for (const auto& entry : searchedCellUnexpressedIndexCount) {
+            const std::string& key = entry.first;
+            const int value = entry.second;
+
+            std::cout << "Key: " << key << "\n";
+            std::cout << "Value: " << value << "\n";
+        }
 
         std::vector<std::string> cell_list = find_k_MAX(k, searchedCellExpressedIndexCount, expressedIndexCount, searchedCellUnexpressedIndexCount, unexpressedIndexCount, alpha);
 
@@ -302,6 +351,7 @@ void search_single_cell(const rapidcsv::Document& query_csv, const rapidcsv::Doc
         // 使用互斥锁保护对 JSON 对象的访问
         // lock_guard<mutex> lock(jsonMutex);
         j[cellName] = cell_list;
+        std::cout << "*********************** " << cellName << " end ***********************" << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
