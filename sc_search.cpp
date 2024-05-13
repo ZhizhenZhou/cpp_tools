@@ -55,8 +55,6 @@ int INDEX_LENGTH_SC_SEARCH = 0;
 // }
 
 std::vector<std::string> find_k_MAX(int k, const std::unordered_map<std::string, int>& expressedLinecount, int expressedIndexCount, const std::unordered_map<std::string, int>& unexpressedLinecount, int unexpressedIndexCount, const float alpha) {
-    int k2 = -1;
-    float alpha2 = 0.8;
     // json jsonMatches;
 
     // for (const auto& entry : expressedLinecount) {
@@ -122,17 +120,17 @@ std::vector<std::string> find_k_MAX(int k, const std::unordered_map<std::string,
         return a.second > b.second;
     });
 
-    int k1 = 0;
-    int topKCount = expressedIndexCount;
+    // int i = 0;
+    // int topKCount = expressedIndexCount;
     std::vector<std::string> result;
     for (int i = 0; i < sortedExpressedPairs.size(); ++i) {
         const std::string& str = sortedExpressedPairs[i].first;
         int expressedCount = sortedExpressedPairs[i].second;
 
-        if (expressedCount < topKCount && k > 0) {
-            topKCount = expressedCount;
-            k1++;
-        }
+        // if (expressedCount < topKCount && k > 0) {
+        //     topKCount = expressedCount;
+        //     i++;
+        // }
 
         if (expressedCount == 0) {
             int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
@@ -159,36 +157,6 @@ std::vector<std::string> find_k_MAX(int k, const std::unordered_map<std::string,
                             ", match_degree_unexpressed: " + match_degree_unexpressed.str();
             result.push_back(result_str);
         }
-
-        // if (k1 <= k2) {
-        //     int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
-        //     double match_unexpressed = static_cast<double>(unexpressedCount) / static_cast<double>(unexpressedIndexCount);
-        //     if (match_unexpressed > alpha2) {
-        //         std::stringstream match_degree_expressed;
-        //         match_degree_expressed << expressedCount << "/" << expressedIndexCount;
-        //         std::stringstream match_degree_unexpressed;
-        //         match_degree_unexpressed << unexpressedCount << "/" << unexpressedIndexCount;
-
-        //         std::string result_str = str + ", match_degree_expressed: " + match_degree_expressed.str() +
-        //                         ", match_degree_unexpressed: " + match_degree_unexpressed.str();
-        //         result.push_back(result_str);
-        //     }
-        // } else if (k1 <= k) {
-        //     int unexpressedCount = unexpressedLinecount.count(str) ? unexpressedLinecount.at(str) : 0;
-        //     double match_unexpressed = static_cast<double>(unexpressedCount) / static_cast<double>(unexpressedIndexCount);
-        //     if (match_unexpressed > alpha) {
-        //         std::stringstream match_degree_expressed;
-        //         match_degree_expressed << expressedCount << "/" << expressedIndexCount;
-        //         std::stringstream match_degree_unexpressed;
-        //         match_degree_unexpressed << unexpressedCount << "/" << unexpressedIndexCount;
-
-        //         std::string result_str = str + ",match_degree_expressed:" + match_degree_expressed.str() +
-        //                         ",match_degree_unexpressed:" + match_degree_unexpressed.str();
-        //         result.push_back(result_str);
-        //     }
-        // } else {
-        //     break;
-        // }
     }
     return result;
 }
